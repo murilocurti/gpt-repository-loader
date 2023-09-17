@@ -4,6 +4,7 @@ import os
 import sys
 import fnmatch
 
+
 def get_ignore_list(ignore_file_path):
     ignore_list = []
     with open(ignore_file_path, 'r') as ignore_file:
@@ -11,13 +12,20 @@ def get_ignore_list(ignore_file_path):
             if sys.platform == "win32":
                 line = line.replace("/", "\\")
             ignore_list.append(line.strip())
+            ignore_list.append("*.deb")
+            ignore_list.append("*.pdf")
+            ignore_list.append("*.ttf")
+            ignore_list.append("*.doc")
+            ignore_list.append("*.docx")
     return ignore_list
+
 
 def should_ignore(file_path, ignore_list):
     for pattern in ignore_list:
         if fnmatch.fnmatch(file_path, pattern):
             return True
     return False
+
 
 def process_repository(repo_path, ignore_list, output_file):
     for root, _, files in os.walk(repo_path):
@@ -32,33 +40,48 @@ def process_repository(repo_path, ignore_list, output_file):
                 output_file.write(f"{relative_file_path}\n")
                 output_file.write(f"{contents}\n")
 
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python git_to_text.py /path/to/git/repository [-p /path/to/preamble.txt] [-o /path/to/output_file.txt]")
+        print(
+            "Usage: python git_to_text.py /path/to/git/repository [-p /path/to/preamble.txt] [-o /path/to/output_file.txt]")
         sys.exit(1)
 
     repo_path = sys.argv[1]
+    print(f"Processing repository at {repo_path}.")
+
     ignore_file_path = os.path.join(repo_path, ".gptignore")
     if sys.platform == "win32":
         ignore_file_path = ignore_file_path.replace("/", "\\")
 
+    print(f"Looking for ignore file at {ignore_file_path}.")
+
     if not os.path.exists(ignore_file_path):
+        print(f"Could not find .gptignore file at {ignore_file_path}.")
         # try and use the .gptignore file in the current directory as a fallback.
         HERE = os.path.dirname(os.path.abspath(__file__))
         ignore_file_path = os.path.join(HERE, ".gptignore")
+
+    print(f"Looking for ignore file at {ignore_file_path}.")
 
     preamble_file = None
     if "-p" in sys.argv:
         preamble_file = sys.argv[sys.argv.index("-p") + 1]
 
+    print(f"Looking for preamble file at {preamble_file}.")
+
     output_file_path = 'output.txt'
     if "-o" in sys.argv:
         output_file_path = sys.argv[sys.argv.index("-o") + 1]
 
+    print(f"Writing output to {output_file_path}."
+          )
     if os.path.exists(ignore_file_path):
         ignore_list = get_ignore_list(ignore_file_path)
     else:
         ignore_list = []
+
+    print(f"Ignoring the following files: {ignore_list}")
 
     with open(output_file_path, 'w') as output_file:
         if preamble_file:
@@ -71,4 +94,3 @@ if __name__ == "__main__":
     with open(output_file_path, 'a') as output_file:
         output_file.write("--END--")
     print(f"Repository contents written to {output_file_path}.")
-    
